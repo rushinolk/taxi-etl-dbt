@@ -23,6 +23,25 @@ Pipeline de dados **ELT** construído para extrair, processar e gerar inteligên
 
 ---
 
+
+## 📐 Arquitetura Medallion (Bronze → Silver → Gold)
+
+Todo o fluxo de dados foi modelado seguindo as melhores práticas de Analytics Engineering:
+
+* 🥉 **Camada Bronze (Ingestão)**
+  * **Processo:** Download massivo direto via API oficial do dataset.
+  * **Resultado:** Dados brutos intocados, salvos no formato `.parquet` para redução drástica do armazenamento local (Landing Zone).
+
+* 🥈 **Camada Silver (Limpeza e Validação)**
+  * **Processo (dbt):** Transformação em duas etapas (`staging` e `intermediate`).
+  * **Resultado:** Padronização de nomenclatura (`snake_case`), casting de tipos de dados (timestamp, numéricos) e aplicação de regras de negócio. Eliminação de anomalias financeiras (ex: tarifas negativas) e corridas com coordenadas geográficas inválidas ou nulas.
+
+* 🥇 **Camada Gold (Analytics & Marts)**
+  * **Processo (dbt + DuckDB):** Agregações dimensionais para o usuário final de negócios.
+  * **Resultado:** Tabela `mart_taxi_metrics` consolidando a performance operacional por hora, participação de mercado das provedoras de taxímetro e métricas de pagamento prontas para o consumo do Dashboard.
+
+---
+
 ## 🏗️ Arquitetura do Pipeline (Medallion)
 
 ```text
@@ -61,26 +80,24 @@ Pipeline de dados **ELT** construído para extrair, processar e gerar inteligên
 
 ```
 
----
-
 ## 🛠️ Stack Tecnológica
 
-| Componente | Ferramenta | Justificativa |
-| :--- | :--- | :--- |
-| **Ingestão** | `Python` | Download massivo via API do Kaggle para armazenamento local. |
-| **Armazenamento** | `Apache Parquet` | Formato colunar otimizado para leitura e alta compressão. |
-| **Processamento** | `DuckDB` | OLAP in-process. Consultas em milhões de linhas com altíssima performance local (sem custos cloud). |
-| **Transformação** | `dbt Core` | Modelagem SQL-first, garantindo linhagem de dados e aplicação de regras de negócio. |
-| **Orquestração** | `Airflow + Cosmos` | O Cosmos traduz os modelos do dbt nativamente em Tasks do Airflow para automação visual. |
-| **Dashboard** | `Streamlit` | Frontend Python interativo lendo diretamente a camada Gold. |
+| Componente | Ferramenta |
+| :--- | :--- |
+| **Ingestão** | `Python` |
+| **Armazenamento** | `Parquet` |
+| **Processamento** | `DuckDB` |
+| **Transformação** | `dbt Core` |
+| **Orquestração** | `Airflow + Cosmos` |
+| **Dashboard** | `Streamlit` |
 
 ---
 
 ## 💡 Soluções de Engenharia (Destaques)
 
-* **Prevenção de OOM (Out of Memory):** Substituição de funções de janela complexas por processamento escalar lógico (`CASE WHEN`), transferindo o gargalo da memória RAM para a CPU.
-* **Gestão de Locks no DuckDB:** Implementação de limite de concorrência (`max_active_tasks=1` e `threads: 1`) para evitar *Deadlocks* de escrita no banco de arquivo único.
-* **Decoupled Architecture:** O Streamlit opera de forma "cega", lendo os arquivos consolidados sem depender do dbt ou do Airflow estarem online.
+* **dbt + DuckDB para Big Data Local:** A combinação dessas ferramentas foi a escolha arquitetural principal devido ao tamanho massivo dos dados (+11.3 milhões de registros). O DuckDB atua como um motor analítico hiper-otimizado que mastiga esse volume em segundos na própria máquina, enquanto o dbt gerencia as transformações com SQL limpo e versionado.
+* **Arquitetura 100% Desacoplada:** Todo o fluxo foi desenhado com separação de responsabilidades. A ingestão em Python ocorre separada da transformação, e o painel no Streamlit opera de forma totalmente independente (ele consome apenas os arquivos `.parquet` finais da camada Gold, sem precisar que o Airflow ou o banco de dados estejam ativos durante a navegação).
+* **Prevenção de OOM e Lógica Escalar:** Para evitar o esgotamento de memória RAM (OOM Killer do Docker) ao processar todas as linhas simultaneamente, substituímos funções globais de ordenação em memória por **processamento escalar lógico** (`CASE WHEN`), transferindo a carga para a CPU e garantindo estabilidade no pipeline.
 
 ---
 
@@ -90,7 +107,7 @@ Pipeline de dados **ELT** construído para extrair, processar e gerar inteligên
 
 1. **Clone o repositório:**
    ```bash
-   git clone [https://github.com/Arthurmgomes/nyc-yellow-taxi-pipeline.git](https://github.com/Arthurmgomes/nyc-yellow-taxi-pipeline.git)
+   git clone https://github.com/rushinolk/nyc-yellow-taxi-pipeline.git
    cd nyc-yellow-taxi-pipeline
    ```
 
@@ -122,4 +139,4 @@ Pipeline de dados **ELT** construído para extrair, processar e gerar inteligên
 ### 👨‍💻 Autor
 **Arthur Machado Gomes**
 * [LinkedIn](https://www.linkedin.com/in/arthur-gomes1/)
-* [GitHub](https://github.com/Arthurmgomes)
+* [GitHub](https://github.com/rushinolk)
