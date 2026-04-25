@@ -1,45 +1,123 @@
-Overview
-========
+# 🚕 NYC Yellow Taxi: End-to-End Data Engineering Pipeline
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+Pipeline de dados **ELT** construído para extrair, processar e gerar inteligência a partir do dataset massivo de táxis de Nova York (TLC). Da ingestão de dados brutos à visualização em um painel executivo.
 
-Project Contents
-================
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Airflow-017CEE?style=for-the-badge&logo=Apache%20Airflow&logoColor=white)
+![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=for-the-badge&logo=duckdb&logoColor=black)
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
 
-Your Astro project contains the following files and folders:
+---
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+## 📊 Resultados em Destaque
 
-Deploy Your Project Locally
-===========================
+| Métrica | Resultado |
+| :--- | :--- |
+| 🗂️ **Registros Processados** | **33.86M corridas** validadas e modeladas na camada Gold |
+| 💰 **Receita Analisada** | **$ 531.22 Milhões** de faturamento rastreado no período |
+| 💳 **Ticket Médio** | **$ 15.39** cobrados por corrida |
+| 🏢 **Market Share** | **VeriFone Inc (53.7%)** vs Creative Mobile (46.3%) |
+| 🕕 **Pico de Demanda** | **18h – 20h** concentra o maior volume de viagens |
+| ⚡ **Performance OLAP** | **Segundos** para processar 33M+ de linhas (DuckDB in-process) |
 
-Start Airflow on your local machine by running 'astro dev start'.
+---
 
-This command will spin up five Docker containers on your machine, each for a different Airflow component:
+## 🏗️ Arquitetura do Pipeline (Medallion)
 
-- Postgres: Airflow's Metadata Database
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- DAG Processor: The Airflow component responsible for parsing DAGs
-- API Server: The Airflow component responsible for serving the Airflow UI and API
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+```text
+  KAGGLE API (Dataset TLC)
+           │
+           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    CAMADA BRONZE  (Python)                   │
+│  Extração bruta ──► nyc_yellow_taxi_raw.parquet              │
+└──────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────────────────────────┐
+│        ORQUESTRAÇÃO: APACHE AIRFLOW + ASTRONOMER COSMOS      │
+│  Isolamento de concorrência e execução de DAGs dinâmicas     │
+└──────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────────────────────────┐
+│             CAMADA SILVER / INTERMEDIATE  (dbt)              │
+│  stg_taxi ──► Padronização (snake_case) e tipagem            │
+│  int_taxi_flagged ──► Limpeza e validação escalar            │
+└──────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────────────────────────┐
+│             CAMADA GOLD / MARTS  (dbt + DuckDB)              │
+│  mart_taxi_metrics ──► Agregações OLAP (Sazonalidade, KPIs)  │
+└──────────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────────────────────────┐
+│                  DASHBOARD  (Streamlit)                      │
+│       Frontend desacoplado consumindo os dados em Parquet    │
+└──────────────────────────────────────────────────────────────┘
 
-When all five containers are ready the command will open the browser to the Airflow UI at http://localhost:8080/. You should also be able to access your Postgres Database at 'localhost:5432/postgres' with username 'postgres' and password 'postgres'.
 
-Note: If you already have either of the above ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
 
-Deploy Your Project to Astronomer
-=================================
+## 🛠️ Stack Tecnológica
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
+| Componente | Ferramenta | Justificativa |
+| :--- | :--- | :--- |
+| **Ingestão** | `Python` | Download massivo via API do Kaggle para armazenamento local. |
+| **Armazenamento** | `Apache Parquet` | Formato colunar otimizado para leitura e alta compressão. |
+| **Processamento** | `DuckDB` | OLAP in-process. Consultas em milhões de linhas com altíssima performance local (sem custos cloud). |
+| **Transformação** | `dbt Core` | Modelagem SQL-first, garantindo linhagem de dados e aplicação de regras de negócio. |
+| **Orquestração** | `Airflow + Cosmos` | O Cosmos traduz os modelos do dbt nativamente em Tasks do Airflow para automação visual. |
+| **Dashboard** | `Streamlit` | Frontend Python interativo lendo diretamente a camada Gold. |
 
-Contact
-=======
+---
 
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+## 💡 Soluções de Engenharia (Destaques)
+
+* **Prevenção de OOM (Out of Memory):** Substituição de funções de janela complexas por processamento escalar lógico (`CASE WHEN`), transferindo o gargalo da memória RAM para a CPU.
+* **Gestão de Locks no DuckDB:** Implementação de limite de concorrência (`max_active_tasks=1` e `threads: 1`) para evitar *Deadlocks* de escrita no banco de arquivo único.
+* **Decoupled Architecture:** O Streamlit opera de forma "cega", lendo os arquivos consolidados sem depender do dbt ou do Airflow estarem online.
+
+---
+
+## 🚀 Como Executar Localmente
+
+**Pré-requisitos:** Docker Desktop e Astro CLI.
+
+1. **Clone o repositório:**
+   ```bash
+   git clone [https://github.com/Arthurmgomes/nyc-yellow-taxi-pipeline.git](https://github.com/Arthurmgomes/nyc-yellow-taxi-pipeline.git)
+   cd nyc-yellow-taxi-pipeline
+   ```
+
+2. **Inicie a Orquestração (Airflow):**
+   ```bash
+   astro dev start
+   ```
+
+3. **Execute o Pipeline:**
+   Acesse `http://localhost:8080` (usuário: `admin` / senha: `admin`), ative a DAG `nyc_taxi_end_to_end_cosmos` e aguarde a finalização (status verde).
+
+4. **Abra o Painel Executivo:**
+   Em um novo terminal, inicie a aplicação Streamlit:
+   ```bash
+   streamlit run dashboard.py
+   ```
+
+---
+
+## 📸 Screenshots
+
+*Substitua os links abaixo pelas suas imagens:*
+
+![Airflow DAG](LINK_DA_IMAGEM_AQUI)
+
+![Dashboard Overview](LINK_DA_IMAGEM_AQUI)
+
+---
+### 👨‍💻 Autor
+**Arthur Machado Gomes**
+* [LinkedIn](https://www.linkedin.com/in/arthur-gomes1/)
+* [GitHub](https://github.com/Arthurmgomes)
