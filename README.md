@@ -59,6 +59,8 @@ Pipeline de dados **ELT** construído para extrair, processar e gerar inteligên
 │       Frontend desacoplado consumindo os dados em Parquet    │
 └──────────────────────────────────────────────────────────────┘
 
+```
+
 ---
 
 ## 🛠️ Stack Tecnológica
