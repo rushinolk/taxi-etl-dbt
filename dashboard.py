@@ -23,14 +23,14 @@ st.markdown("""
 
 # Caminhos dos arquivos Gold (Mart e Anomalias)
 PARQUET_PATH = 'include/data/gold/mart_taxi_metrics.parquet'
-ANOMALIES_PATH = 'include/data/gold/mart_taxi_anomalies.parquet'
+
 
 # ==========================================
 # 2. Barra Lateral (Sidebar) e Filtros
 # ==========================================
+
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/New_York_City_Taxi_logo.svg/1024px-New_York_City_Taxi_logo.svg.png", width=150)
-    st.title("NYC Taxi Analytics")
+    st.title("🚕 NYC Taxi Analytics")
     st.markdown("Dashboard executivo construído com **DuckDB + Streamlit**.")
     st.divider()
     
@@ -71,7 +71,7 @@ def format_number(num):
 # ==========================================
 # 5. Visão Geral: KPIs Principais
 # ==========================================
-st.title("🚖 Executive Dashboard: Visão Geral")
+st.title("🚖 Dashboard: Visão Geral")
 st.markdown("Acompanhamento de performance, faturamento e comportamento da frota de táxis amarelos de Nova York.")
 
 @st.cache_data
@@ -105,12 +105,11 @@ st.divider()
 # 6. Deep Dive: As 5 Views do Desafio
 # ==========================================
 st.subheader("🔍 Exploração por Dimensões de Negócio")
-tab_hora, tab_fornecedor, tab_pagamento, tab_semana, tab_qualidade = st.tabs([
+tab_hora, tab_fornecedor, tab_pagamento, tab_semana = st.tabs([
     "🕒 Operacional por Hora", 
     "🏢 Market Share", 
     "💳 Hábitos de Pagamento", 
-    "📅 Sazonalidade Semanal",
-    "🛡️ Qualidade de Dados (Anomalias)"
+    "📅 Sazonalidade Semanal"
 ])
 
 chart_theme = "plotly_dark" 
@@ -226,37 +225,3 @@ with tab_semana:
     fig_semana.update_traces(line=dict(width=3), marker=dict(size=8))
     st.plotly_chart(fig_semana, use_container_width=True)
 
-# --- ABA 5: QUALIDADE E ANOMALIAS ---
-with tab_qualidade:
-    st.markdown("### 🛡️ Monitoramento de Qualidade (Data Observability)")
-    st.markdown("Visão das corridas que foram **reprovadas** pelas nossas regras de negócio e bloqueadas de entrar no dataset oficial.")
-    
-    try:
-        query_anomalias = f"SELECT * FROM '{ANOMALIES_PATH}'"
-        df_anomalias = duckdb.sql(query_anomalias).df()
-        
-        df_anomalias['pickup_time'] = pd.to_datetime(df_anomalias['pickup_time'])
-        if len(date_range) == 2:
-            mask = (df_anomalias['pickup_time'].dt.date >= start_date) & (df_anomalias['pickup_time'].dt.date <= end_date)
-            df_anomalias = df_anomalias.loc[mask]
-        
-        total_erros = len(df_anomalias)
-        
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.metric("🚨 Total de Anomalias Bloqueadas", format_number(total_erros))
-            
-            erro_counts = df_anomalias['motivo_reprovacao'].value_counts().reset_index()
-            erro_counts.columns = ['Motivo', 'Quantidade']
-            fig_erros = px.pie(erro_counts, values='Quantidade', names='Motivo', hole=0.5, template=chart_theme,
-                               color_discrete_sequence=['#D32F2F', '#F57C00', '#1976D2'])
-            fig_erros.update_layout(showlegend=False)
-            fig_erros.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig_erros, use_container_width=True)
-            
-        with col2:
-            st.markdown("**Tabela de Investigação (Amostra das Anomalias)**")
-            st.dataframe(df_anomalias.head(100), use_container_width=True) 
-            
-    except Exception as e:
-        st.warning(f"Arquivo de anomalias não encontrado. Certifique-se de ter rodado o novo modelo de anomalias no dbt. Erro: {e}")
