@@ -1,0 +1,7 @@
+taxi_pipeline:
+  outputs:
+    dev:
+      type: duckdb
+      path: /usr/local/airflow/include/data/taxi_data.duckdb
+      threads: 1
+  target: dev

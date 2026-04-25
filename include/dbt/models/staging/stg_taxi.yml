@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: stg_taxi
+    description: "Camada Silver limpa e tratada"
+    columns:
+      - name: vendor_id
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2] # Domínio de categoria
+      - name: payment_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4, 5, 6]
+

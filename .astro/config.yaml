@@ -1,0 +1,6 @@
+project:
+    name: etl-taxi-nyc
+postgres:
+  port: 5434
+webserver:
+  port: 8080
