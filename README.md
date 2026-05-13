@@ -125,15 +125,6 @@ Todo o fluxo de dados foi modelado seguindo as melhores práticas de Analytics E
    streamlit run dashboard.py
    ```
 
----
-
-## 📸 Screenshots
-
-*Substitua os links abaixo pelas suas imagens:*
-
-![Airflow DAG](LINK_DA_IMAGEM_AQUI)
-
-![Dashboard Overview](LINK_DA_IMAGEM_AQUI)
 
 ---
 ### 👨‍💻 Autor
